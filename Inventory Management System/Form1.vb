@@ -18,6 +18,7 @@ Public Class Form1
         Items.Text = ""
         roomNo.Text = ""
         QuantityForDistribute.Text = ""
+        ItemId2.Text = ""
     End Sub
     Private Sub populateStock()
         Con.Open()
@@ -42,7 +43,8 @@ Public Class Form1
         Con.Close()
     End Sub
 
-    Private Sub LoadItemName()
+
+    Private Sub loadItems()
         Try
             Con.Open()
             Dim query As String = "SELECT ItemName FROM Stock_Item"
@@ -59,6 +61,33 @@ Public Class Form1
         Catch ex As Exception
             MsgBox("An error occurred: " & ex.Message)
         End Try
+    End Sub
+
+    Private Sub LoadItemName()
+
+        'Try
+        '    Con.Open()
+        '    Dim query As String = "SELECT ItemName FROM Stock_Item WHERE id = @id"
+        '    Dim reader As MySqlDataReader
+        '    Using command As New MySqlCommand(query, Con)
+        '        ' Assuming you have a parameter named @id in your query
+        '        command.Parameters.AddWithValue("@id", ItemId.Text)
+
+        '        reader = command.ExecuteReader()
+        '        While reader.Read
+        '            ' Corrected the case of "itemName" to "ItemName"
+        '            Dim itemName As String = reader.GetString("ItemName")
+        '            Items.Items.Add(itemName)
+        '        End While
+        '    End Using
+        'Catch ex As Exception
+        '    MsgBox("An error occurred: " & ex.Message)
+        'Finally
+        '    ' Ensure that the connection is closed, whether an exception occurred or not
+        '    If Con.State = ConnectionState.Open Then
+        '        Con.Close()
+        '    End If
+        'End Try
 
     End Sub
 
@@ -131,7 +160,7 @@ Public Class Form1
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         populateStock()
         populateDistributed()
-        LoadItemName()
+        loadItems()
         FetchRoom()
 
     End Sub
@@ -156,8 +185,8 @@ Public Class Form1
                     Con.Close()
                 End Using
                 MsgBox("Item added successfully!")
-                LoadItemName()
                 populateStock()
+                LoadItemName()
                 clearBtn()
             End If
         Catch ex As Exception
@@ -222,75 +251,55 @@ Public Class Form1
         clearBtn()
     End Sub
 
-
-    Private Sub stock()
+    Public Sub stock()
         Try
-            ' Replace with your actual product ID
+            ' Step 1: Connect to the database
             Con.Open()
-            Dim quantityToDistribute As Integer = CInt(QuantityForDistribute.Text) ' Assuming txtQuantity is a TextBox for entering quantity
 
-            ' Start a transaction
-            Using transaction As MySqlTransaction = Con.BeginTransaction()
-                Try
-                    ' Check if there's enough stock before updating
+            ' Step 2: Retrieve the current stock quantity
+            Dim getCurrentStockQuery As String = "SELECT Stocks FROM Stock_Item WHERE id = @productId"
+            Using cmdGetCurrentStock As New MySqlCommand(getCurrentStockQuery, Con)
+                ' Use parameterized query to prevent SQL injection
+                cmdGetCurrentStock.Parameters.AddWithValue("@productId", ItemId2.Text)
 
-                    Dim checkStockQuery As String = "SELECT Stocks FROM Stock_Item WHERE id = @id"
-                    Using checkStockCommand As New MySqlCommand(checkStockQuery, Con)
-                        ' Use ItemId2.Text instead of ItemId2
-                        checkStockCommand.Parameters.AddWithValue("@id", ItemId2.Text)
-                        Dim currentStock As Integer = CInt(checkStockCommand.ExecuteScalar())
+                ' Execute the command to get the current stock value
+                Dim currentStock As Integer = Convert.ToInt32(cmdGetCurrentStock.ExecuteScalar())
+                Dim quantityToDeduct As Integer = Convert.ToInt32(QuantityForDistribute.Text)
+                If currentStock >= quantityToDeduct Then
+                    Dim newStock As Integer = currentStock - quantityToDeduct
 
-                        If currentStock >= quantityToDistribute Then
-                            ' Update the stock
-                            Dim updateStockQuery As String = "UPDATE Stock_Item SET Stocks = Stocks - @Quantity WHERE id = @id"
-                            Using updateStockCommand As New MySqlCommand(updateStockQuery, Con)
-                                updateStockCommand.Parameters.AddWithValue("@Quantity", quantityToDistribute)
-                                ' Use ItemId2.Text instead of ItemId2
-                                updateStockCommand.Parameters.AddWithValue("@id", ItemId2.Text)
+                    ' Step 3: Update the stock quantity in the database
+                    Dim updateStockQuery As String = "UPDATE Stock_Item SET Stocks = @newStock WHERE id = @productId"
+                    Using cmdUpdateStock As New MySqlCommand(updateStockQuery, Con)
+                        ' Use parameterized query to prevent SQL injection
+                        cmdUpdateStock.Parameters.AddWithValue("@newStock", newStock)
+                        cmdUpdateStock.Parameters.AddWithValue("@productId", ItemId2.Text)
+                        cmdUpdateStock.ExecuteNonQuery()
 
-                                updateStockCommand.ExecuteNonQuery()
-
-                                MessageBox.Show("Stock distributed successfully.")
-
-                                ' Commit the transaction if everything is successful
-                                transaction.Commit()
-
-                                ' Open the connection just before executing the second query
-
-                                Dim insertQuery As String = "INSERT INTO Distributed_Item (id, Item, RoomNo, Quantity) VALUES (@id, @itemName, @roomNo, @Quantity)"
-                                Using cmd As New MySqlCommand(insertQuery, Con)
-                                    cmd.Parameters.AddWithValue("@id", Guid.NewGuid().ToString().Substring(0, 6))
-                                    cmd.Parameters.AddWithValue("@itemName", Items.Text.ToUpper())
-                                    cmd.Parameters.AddWithValue("@roomNo", roomNo.Text.ToUpper())
-                                    cmd.Parameters.AddWithValue("@Quantity", Integer.Parse(QuantityForDistribute.Text))
-                                    cmd.ExecuteNonQuery()
-
-                                End Using
-                            End Using
-                        Else
-                            MessageBox.Show("Insufficient stock.")
-                        End If
+                        MsgBox("Item was distributed")
+                        Dim query As String = "INSERT INTO Distributed_Item (id, Item, RoomNo, Quantity) VALUES (@id, @itemName, @roomNo, @quantity)"
+                        Using cmd As New MySqlCommand(query, Con)
+                            cmd.Parameters.AddWithValue("@id", Guid.NewGuid().ToString().Substring(0, 6))
+                            cmd.Parameters.AddWithValue("@itemName", Items.Text.ToUpper())
+                            cmd.Parameters.AddWithValue("@roomNo", roomNo.Text)
+                            cmd.Parameters.AddWithValue("@quantity", Integer.Parse(QuantityForDistribute.Text))
+                            cmd.ExecuteNonQuery()
+                            clearBtn()
+                        End Using
                     End Using
-                Catch ex As Exception
-                    ' Handle exceptions here, log them, or display an error message.
-                    MessageBox.Show("An error occurred: " & ex.Message)
-                    ' Rollback the transaction in case of an error
-                    transaction.Rollback()
-                End Try
+                Else
+                    MsgBox("Insufficient stocks")
+                End If
             End Using
         Catch ex As Exception
-            ' Handle exceptions here, log them, or display an error message.
-            MessageBox.Show("An error occurred: " & ex.Message)
+            MsgBox("An error occurred: " & ex.Message)
         Finally
-
+            ' Ensure that the connection is closed, whether an exception occurred or not
+            If Con.State = ConnectionState.Open Then
+                Con.Close()
+            End If
         End Try
-        Con.Close()
-        clearBtn()
     End Sub
-
-
-
-
 
 
     Private Sub Button10_Click(sender As Object, e As EventArgs) Handles Button10.Click
@@ -301,6 +310,7 @@ Public Class Form1
                 stock()
                 populateDistributed()
                 populateStock()
+
 
             End If
         Catch ex As Exception
@@ -326,7 +336,7 @@ Public Class Form1
     End Sub
 
     Private Sub Items_SelectedIndexChanged(sender As Object, e As EventArgs) Handles Items.SelectedIndexChanged
-        'FetchItemId()
+        FetchItemId()
     End Sub
 
     Private Sub Button9_Click(sender As Object, e As EventArgs)

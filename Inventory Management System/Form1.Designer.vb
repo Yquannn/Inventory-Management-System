@@ -303,7 +303,6 @@ Partial Class Form1
         '
         Me.roomNo.Font = New System.Drawing.Font("Microsoft Sans Serif", 12.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.roomNo.FormattingEnabled = True
-        Me.roomNo.Items.AddRange(New Object() {"Select Item"})
         Me.roomNo.Location = New System.Drawing.Point(574, 66)
         Me.roomNo.Margin = New System.Windows.Forms.Padding(2, 3, 2, 3)
         Me.roomNo.Name = "roomNo"
@@ -313,17 +312,15 @@ Partial Class Form1
         'ItemId2
         '
         Me.ItemId2.Font = New System.Drawing.Font("Microsoft Sans Serif", 12.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.ItemId2.Location = New System.Drawing.Point(32, 66)
+        Me.ItemId2.Location = New System.Drawing.Point(32, 68)
         Me.ItemId2.Name = "ItemId2"
         Me.ItemId2.Size = New System.Drawing.Size(85, 26)
         Me.ItemId2.TabIndex = 218
-        Me.ItemId2.Visible = False
         '
         'Items
         '
         Me.Items.Font = New System.Drawing.Font("Microsoft Sans Serif", 12.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
         Me.Items.FormattingEnabled = True
-        Me.Items.Items.AddRange(New Object() {"Select Item"})
         Me.Items.Location = New System.Drawing.Point(235, 64)
         Me.Items.Margin = New System.Windows.Forms.Padding(2, 3, 2, 3)
         Me.Items.Name = "Items"
