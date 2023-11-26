@@ -19,6 +19,11 @@ Public Class Form1
         roomNo.Text = ""
         QuantityForDistribute.Text = ""
         ItemId2.Text = ""
+        scheduleId.Text = ""
+        roomNumber.Text = ""
+        schedule.Text = ""
+        prioroty.Text = ""
+        status.Text = ""
     End Sub
     Private Sub populateStock()
         Con.Open()
@@ -43,53 +48,87 @@ Public Class Form1
         Con.Close()
     End Sub
 
+    Private Sub populatSchedule()
+        Con.Open()
+        Dim sql As String = "SELECT * FROM scheduling"
+        Dim cmd As New MySqlCommand(sql, Con)
+        Dim adapter As New MySqlDataAdapter(cmd)
+        Dim builder As New MySqlCommandBuilder(adapter)
+        Dim ds As New DataSet()
+        adapter.Fill(ds, "scheduling")
+        schedDVG.DataSource = ds.Tables("scheduling")
+
+        Con.Close()
+    End Sub
 
     Private Sub loadItems()
         Try
+            ' Assuming Con is a MySqlConnection object declared and initialized somewhere else in your code
+            ' Also, make sure to replace "YourConnectionString" with your actual connection string
+
             Con.Open()
+
             Dim query As String = "SELECT ItemName FROM Stock_Item"
-            Dim reader As MySqlDataReader
             Using command As New MySqlCommand(query, Con)
-                reader = command.ExecuteReader
-                While reader.Read
-                    Dim itemName = reader.GetString("itemName")
-                    Items.Items.Add(itemName)
-                End While
-                Con.Close()
+                Dim adapter As New MySqlDataAdapter(command)
+                Dim ds As New DataSet()
+
+                ' Fill the dataset with data from the database
+                adapter.Fill(ds)
+
+                ' Clear existing items in the ComboBox before adding new ones
+                Items.Items.Clear()
+
+                ' Check if there are any rows in the dataset
+                If ds.Tables.Count > 0 AndAlso ds.Tables(0).Rows.Count > 0 Then
+                    ' Iterate through each row in the dataset and add the item names to the ComboBox
+                    For Each row As DataRow In ds.Tables(0).Rows
+                        ' Assuming "ItemName" is the column name in your database
+                        Items.Items.Add(row("ItemName").ToString())
+                    Next
+                Else
+                    MsgBox("No items found in the database.")
+                End If
             End Using
 
         Catch ex As Exception
             MsgBox("An error occurred: " & ex.Message)
+        Finally
+            ' Always close the connection, whether an exception occurred or not
+            If Con.State = ConnectionState.Open Then
+                Con.Close()
+            End If
         End Try
     End Sub
 
-    Private Sub LoadItemName()
 
-        'Try
-        '    Con.Open()
-        '    Dim query As String = "SELECT ItemName FROM Stock_Item WHERE id = @id"
-        '    Dim reader As MySqlDataReader
-        '    Using command As New MySqlCommand(query, Con)
-        '        ' Assuming you have a parameter named @id in your query
-        '        command.Parameters.AddWithValue("@id", ItemId.Text)
+    'Private Sub LoadItemName()
 
-        '        reader = command.ExecuteReader()
-        '        While reader.Read
-        '            ' Corrected the case of "itemName" to "ItemName"
-        '            Dim itemName As String = reader.GetString("ItemName")
-        '            Items.Items.Add(itemName)
-        '        End While
-        '    End Using
-        'Catch ex As Exception
-        '    MsgBox("An error occurred: " & ex.Message)
-        'Finally
-        '    ' Ensure that the connection is closed, whether an exception occurred or not
-        '    If Con.State = ConnectionState.Open Then
-        '        Con.Close()
-        '    End If
-        'End Try
+    'Try
+    '    Con.Open()
+    '    Dim query As String = "SELECT ItemName FROM Stock_Item WHERE id = @id"
+    '    Dim reader As MySqlDataReader
+    '    Using command As New MySqlCommand(query, Con)
+    '        ' Assuming you have a parameter named @id in your query
+    '        command.Parameters.AddWithValue("@id", ItemId.Text)
 
-    End Sub
+    '        reader = command.ExecuteReader()
+    '        While reader.Read
+    '            ' Corrected the case of "itemName" to "ItemName"
+    '            Dim itemName As String = reader.GetString("ItemName")
+    '            Items.Items.Add(itemName)
+    '        End While
+    '    End Using
+    'Catch ex As Exception
+    '    MsgBox("An error occurred: " & ex.Message)
+    'Finally
+    '    ' Ensure that the connection is closed, whether an exception occurred or not
+    '    If Con.State = ConnectionState.Open Then
+    '        Con.Close()
+    '    End If
+    'End Try
+
+    'End Sub
 
 
 
@@ -144,8 +183,9 @@ Public Class Form1
                 Using command As New MySqlCommand(query, Connn)
                     reader = command.ExecuteReader
                     While reader.Read
-                        Dim roomNumber = reader.GetString("RoomNo")
-                        roomNo.Items.Add(roomNumber)
+                        Dim roomNumbers = reader.GetString("RoomNo")
+                        roomNo.Items.Add(roomNumbers)
+                        roomNumber.Items.Add(roomNumbers)
                     End While
                     Connn.Close()
                 End Using
@@ -162,6 +202,7 @@ Public Class Form1
         populateDistributed()
         loadItems()
         FetchRoom()
+        populatSchedule()
 
     End Sub
 
@@ -186,7 +227,8 @@ Public Class Form1
                 End Using
                 MsgBox("Item added successfully!")
                 populateStock()
-                LoadItemName()
+                'LoadItemName()
+                loadItems()
                 clearBtn()
             End If
         Catch ex As Exception
@@ -340,11 +382,11 @@ Public Class Form1
     End Sub
 
     Private Sub Button9_Click(sender As Object, e As EventArgs)
-        LoadItemName()
+        'LoadItemName()
     End Sub
 
-    Private Sub Button8_Click(sender As Object, e As EventArgs) Handles Button8.Click
-        LoadItemName()
+    Private Sub Button8_Click(sender As Object, e As EventArgs)
+        'LoadItemName()
     End Sub
 
     Private Sub roomNo_SelectedIndexChanged(sender As Object, e As EventArgs) Handles roomNo.SelectedIndexChanged
@@ -353,5 +395,96 @@ Public Class Form1
 
     Private Sub Button9_Click_1(sender As Object, e As EventArgs) Handles Button9.Click
         Application.Exit()
+    End Sub
+
+    Private Sub Button7_Click(sender As Object, e As EventArgs) Handles Button7.Click
+        clearBtn()
+    End Sub
+
+    Private Sub Button11_Click(sender As Object, e As EventArgs) Handles Button11.Click
+        TabControl1.SelectedTab = TabPage3
+    End Sub
+
+    Private Sub Button15_Click(sender As Object, e As EventArgs) Handles Button15.Click
+        Try
+            If String.IsNullOrWhiteSpace(roomNumber.Text) OrElse String.IsNullOrWhiteSpace(schedule.Text) OrElse String.IsNullOrWhiteSpace(prioroty.Text) Then
+                MsgBox("Please comp.lete details.")
+            Else
+
+                Con.Open()
+                Dim query As String = "INSERT INTO Scheduling (id, RoomNo, Schedule, Priority, Status) VALUES (@id, @roomNo, NOW(), @priority, @status)"
+                Dim sched As DateTime = schedule.Value
+                Using cmd As New MySqlCommand(query, Con)
+                    cmd.Parameters.AddWithValue("@id", Guid.NewGuid().ToString().Substring(0, 6))
+                    cmd.Parameters.AddWithValue("@roomNo", roomNumber.Text.ToUpper())
+                    cmd.Parameters.AddWithValue("@sched", sched)
+                    cmd.Parameters.AddWithValue("@priority", prioroty.Text)
+                    cmd.Parameters.AddWithValue("@status", status.Text)
+                    cmd.ExecuteNonQuery()
+                    Con.Close()
+                End Using
+                MsgBox("adding schedule successfully!")
+                populatSchedule()
+                clearBtn()
+            End If
+        Catch ex As Exception
+            MsgBox("An error occurred: " & ex.Message)
+        End Try
+    End Sub
+
+    Private Sub roomNumber_SelectedIndexChanged(sender As Object, e As EventArgs) Handles roomNumber.SelectedIndexChanged
+
+    End Sub
+
+    Private Sub schedDVG_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles schedDVG.CellContentClick
+        If e.RowIndex >= 0 Then
+            Dim row As DataGridViewRow = Me.schedDVG.Rows(e.RowIndex)
+            scheduleId.Text = row.Cells("id").Value.ToString()
+            roomNumber.Text = row.Cells("RoomNo").Value.ToString()
+            status.Text = row.Cells("Status").Value.ToString()
+            prioroty.Text = row.Cells("Priority").Value.ToString()
+            schedule.Text = row.Cells("Schedule").Value.ToString()
+
+        End If
+    End Sub
+
+    Private Sub Button13_Click(sender As Object, e As EventArgs) Handles Button13.Click
+        If scheduleId.Text = "" Then
+            MsgBox("Please select you want to be cleaning")
+        Else
+            status.Text = "Under Cleaning"
+            Con.Open()
+            Dim updateSched As String = "UPDATE scheduling SET Status = @status WHERE id = @schedId"
+            Using updateStatus As New MySqlCommand(updateSched, Con)
+                ' Use parameterized query to prevent SQL injection
+                updateStatus.Parameters.AddWithValue("@schedId", scheduleId.Text)
+                updateStatus.Parameters.AddWithValue("@status", status.Text.ToUpper)
+                updateStatus.ExecuteNonQuery()
+                Con.Close()
+                populatSchedule()
+                clearBtn()
+            End Using
+        End If
+
+    End Sub
+
+    Private Sub Button12_Click(sender As Object, e As EventArgs) Handles Button12.Click
+        If scheduleId.Text = "" Then
+            MsgBox("Please select you want to be cleaned")
+        Else
+            status.Text = "Cleaned"
+            Con.Open()
+            Dim updateSched As String = "UPDATE scheduling SET Status = @status WHERE id = @schedId"
+            Using updateStatus As New MySqlCommand(updateSched, Con)
+                ' Use parameterized query to prevent SQL injection
+                updateStatus.Parameters.AddWithValue("@schedId", scheduleId.Text)
+                updateStatus.Parameters.AddWithValue("@status", status.Text)
+                updateStatus.ExecuteNonQuery()
+                Con.Close()
+                populatSchedule()
+                clearBtn()
+            End Using
+        End If
+
     End Sub
 End Class
